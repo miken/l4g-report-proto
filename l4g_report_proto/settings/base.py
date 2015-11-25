@@ -1,4 +1,11 @@
 import os
+try:
+    import secret
+    # Try bringing in TOKEN and SURVEYMONKEY_API if available (only for local and test)
+    os.environ['SURVEYMONKEY_API_TOKEN'] = secret.SURVEYMONKEY_API_TOKEN
+    os.environ['SURVEYMONKEY_API_KEY'] = secret.SURVEYMONKEY_API_KEY
+except ImportError:
+    pass
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
