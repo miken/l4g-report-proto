@@ -1,6 +1,5 @@
 import os
 from django.db import models
-from django.utils import timezone
 from sm_api import SurveyMonkeyClient
 from report.helpers import str_truncate
 
