@@ -34,15 +34,17 @@ class Survey(models.Model):
                     question.save()
                     # Update question choices as well
                     for a in q['answers']:
-                        cid = a["answer_id"]
-                        text = a["text"]
-                        weight = a.get("weight")
-                        choice, created = Choice.objects.get_or_create(
-                            sm_id=cid,
-                            text=text,
-                            weight=weight,
-                            question_id=question.id
-                            )
+                        # Skip if no content in text
+                        if a["text"]:
+                            cid = a["answer_id"]
+                            text = a["text"]
+                            weight = a.get("weight")
+                            choice, created = Choice.objects.get_or_create(
+                                sm_id=cid,
+                                text=text,
+                                weight=weight,
+                                question_id=question.id
+                                )
 
 
 class Question(models.Model):
@@ -61,7 +63,7 @@ class Choice(models.Model):
     question = models.ForeignKey(Question)
 
     def __unicode__(self):
-        return self.text
+        return "{choice} for {qn}".format(choice=self.text, qn=self.question.text)
 
 
 class Respondent(models.Model):
@@ -73,8 +75,10 @@ class Respondent(models.Model):
 
 
 class Answer(models.Model):
-    choice_id = models.ForeignKey(Choice)
-    respondent_id = models.ForeignKey(Respondent)
+    question = models.ForeignKey(Question)
+    # Not all questions have choices, e.g., open-ended
+    choice = models.ForeignKey(Choice, null=True)
+    respondent = models.ForeignKey(Respondent)
 
 
 class Comment(Answer):
