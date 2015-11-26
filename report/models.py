@@ -1,6 +1,7 @@
 import os
 from django.db import models
 from sm_api import SurveyMonkeyClient
+from report.helpers import str_truncate
 
 
 class Survey(models.Model):
@@ -46,6 +47,64 @@ class Survey(models.Model):
                                 question_id=question.id
                                 )
 
+    def download_responses(self):
+        '''
+        Use get_responses() method in SurveyMonkeyClient to
+        retrieve a list of response dicts, then get_or_create
+        Respondent and Answer associated with the survey
+
+        You should always call update_details() before download_responses()
+        to avoid having non-existent Questions for survey that has never
+        been updated previously
+        '''
+        SURVEYMONKEY_API_TOKEN = os.environ.get('SURVEYMONKEY_API_TOKEN')
+        SURVEYMONKEY_API_KEY = os.environ.get('SURVEYMONKEY_API_KEY')
+        client = SurveyMonkeyClient(SURVEYMONKEY_API_TOKEN, SURVEYMONKEY_API_KEY)
+        data = client.get_responses(self.name)
+        for r in data:
+            rid = r["respondent_id"]
+            respondent, created = Respondent.objects.get_or_create(sm_id=rid, survey_id=self.id)
+            # Only update Answer/Comment/Rating if it's a new respondent
+            # TODO This means that if a respondent somehow update
+            # their answers after submission, the updated value will not be reflected
+            # unless we create a manual override here
+            if created:
+                for q in r["questions"]:
+                    # In each dict q there are 2 keys: "answers", and "question_id"
+                    # First, use "question_id" to locate the question text
+                    qid = q["question_id"]
+                    question = self.question_set.get(sm_id=qid, survey_id=self.id)
+                    # Next, find the response for this question
+                    # q["answers"] is a list of dicts
+                    for raw_answer in q["answers"]:
+                        # Here's the tricky part, in the raw_answer dict
+                        # Sometimes results come with "col", "row", or "text"
+                        # If "text" exists, that's a dead giveaway that it's an open-ended question
+                        # We can save that as comment
+                        if "text" in raw_answer.keys():
+                            comment, created = Answer.objects.get_or_create(
+                                question_id=question.id,
+                                respondent_id=respondent.id,
+                                text=raw_answer["text"]
+                                )
+                        else:
+                            # A quant response
+                            # There will be "row" and "col"
+                            # Use these to look up for responses
+                            row_id = raw_answer.get("row")
+                            col_id = raw_answer.get("col")
+                            # If col_ans exists, it's a horizontal question
+                            if col_id:
+                                choice = question.choice_set.get(sm_id=col_id)
+                            else:
+                                # Try looking up with row_id
+                                choice = question.choice_set.get(sm_id=row_id)
+                            rating, created = Answer.objects.get_or_create(
+                                question_id=question.id,
+                                choice_id=choice.id,
+                                respondent_id=respondent.id,
+                                )
+
 
 class Question(models.Model):
     sm_id = models.CharField("SurveyMonkey ID", max_length=50)
@@ -53,7 +112,7 @@ class Question(models.Model):
     survey = models.ForeignKey(Survey)
 
     def __unicode__(self):
-        return self.text
+        return str_truncate(self.text)
 
 
 class Choice(models.Model):
@@ -63,7 +122,7 @@ class Choice(models.Model):
     question = models.ForeignKey(Question)
 
     def __unicode__(self):
-        return "{choice} for {qn}".format(choice=self.text, qn=self.question.text)
+        return "{choice} - {qn}".format(choice=self.text, qn=str_truncate(self.question.text))
 
 
 class Respondent(models.Model):
@@ -71,7 +130,7 @@ class Respondent(models.Model):
     survey = models.ForeignKey(Survey)
 
     def __unicode__(self):
-        return "Respondent ID {}".format(self.sm_id)
+        return "ID {}".format(self.sm_id)
 
 
 class Answer(models.Model):
@@ -79,11 +138,15 @@ class Answer(models.Model):
     # Not all questions have choices, e.g., open-ended
     choice = models.ForeignKey(Choice, null=True)
     respondent = models.ForeignKey(Respondent)
+    # Input for open-ended
+    text = models.TextField(null=True)
 
-
-class Comment(Answer):
-    text = models.TextField()
-
-
-class Rating(Answer):
-    value = models.IntegerField()
+    def __unicode__(self):
+        q = str_truncate(self.question.text)
+        if self.text:
+            a = str_truncate(self.text)
+            string = '"{a}" - {q}'
+        else:
+            a = str_truncate(self.choice.text)
+            string = '{a} - {q}'
+        return string.format(a=a, q=q)

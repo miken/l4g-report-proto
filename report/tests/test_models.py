@@ -1,7 +1,8 @@
 import os
+import time
 from django.test import TestCase
 from sm_api import SurveyMonkeyClient
-from report.models import Survey, Question, Choice
+from report.models import Survey, Question, Choice, Respondent, Answer
 
 
 class SurveyTestCase(TestCase):
@@ -13,6 +14,10 @@ class SurveyTestCase(TestCase):
         self.client = SurveyMonkeyClient(SURVEYMONKEY_API_TOKEN, SURVEYMONKEY_API_KEY)
         # Create a survey and connect to SurveyMonkey via client
         self.survey = Survey.objects.create(name="Mike Test - DO NOT USE")
+
+    def tearDown(self):
+        # Cool down 1 second to comply with SurveyMonkey API
+        time.sleep(1)
 
     def test_update_details(self):
         # Check that there is no question populated yet
@@ -61,10 +66,59 @@ class SurveyTestCase(TestCase):
         self.assertEqual(select_one_weight_choices, expected)
 
     def test_update_details_twice(self):
+        self.assertEqual(Question.objects.count(), 0)
+        self.assertEqual(Choice.objects.count(), 0)
         # No new questions are created after the first update call
         self.survey.update_details()
         self.assertEqual(Question.objects.count(), 4)
         self.assertEqual(Choice.objects.count(), 11)
+        # Wait for 1 second before making the second call to comply with API
+        time.sleep(1)
         self.survey.update_details()
         self.assertEqual(Question.objects.count(), 4)
         self.assertEqual(Choice.objects.count(), 11)
+
+    def test_download_responses(self):
+        self.assertEqual(Respondent.objects.count(), 0)
+        self.assertEqual(Answer.objects.count(), 0)
+        self.survey.update_details()
+        self.survey.download_responses()
+        respondent_list = Respondent.objects.values_list("sm_id", flat=True).order_by("sm_id")
+        respondent_list = list(respondent_list)
+        expected = [u'4352785923', u'4352786417', u'4352786821', u'4352787305', u'4352787778']
+        self.assertEqual(respondent_list, expected)
+        # Pick a respondent and check nesting of Question & Choice
+        respondent = Respondent.objects.get(sm_id=u'4352787778')
+        answer_list = respondent.answer_set.values_list("question__text", "choice__text").order_by("question__text", "choice__text")
+        answer_list = list(answer_list)
+        expected = [
+            # Enter a comment here is null because open-ended question does not have choice
+            # The comment is stored in answer.text, which we will test after
+            (u'Enter a comment here', None),
+            (u'Select-all question', u'Option 1'),
+            (u'Select-all question', u'Option 2'),
+            (u'Select-all question', u'Option 3'),
+            (u'Select-one question', u'Option 3'),
+            (u'This is a select-one question with weighting', u'Option 4')
+        ]
+        self.assertEqual(answer_list, expected)
+        # Check open-ended
+        another_respondent = Respondent.objects.get(sm_id=u'4352786821')
+        all_comments = another_respondent.answer_set.values_list("text", flat=True)
+        comment = [c for c in all_comments if c is not None][0]
+        self.assertEqual(comment, u'Survey taker 3')
+
+    def test_download_responses_twice(self):
+        self.assertEqual(Respondent.objects.count(), 0)
+        self.assertEqual(Answer.objects.count(), 0)
+        # No new respondents/answers are created after the first download call
+        self.survey.update_details()
+        self.survey.download_responses()
+        self.assertEqual(Respondent.objects.count(), 5)
+        self.assertEqual(Answer.objects.count(), 26)
+        # Wait for 1 second before making the second call to comply with API
+        time.sleep(1)
+        self.survey.update_details()
+        self.survey.download_responses()
+        self.assertEqual(Respondent.objects.count(), 5)
+        self.assertEqual(Answer.objects.count(), 26)
