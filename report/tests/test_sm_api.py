@@ -1,4 +1,5 @@
 import os
+import time
 from django.test import TestCase
 from sm_api import SurveyMonkeyClient
 
@@ -12,6 +13,11 @@ class SMClientTestCase(TestCase):
         self.api_client = SurveyMonkeyClient(SURVEYMONKEY_API_TOKEN, SURVEYMONKEY_API_KEY)
         # Create a survey and connect to SurveyMonkey via client
         self.survey_name = "Mike Test - DO NOT USE"
+
+    def tearDown(self):
+        # Add a second wait in between each test
+        # To prevent running over API quota
+        time.sleep(1)
 
     def test_get_survey_list(self):
         '''
@@ -51,3 +57,4 @@ class SMClientTestCase(TestCase):
         # Check Respondent IDs
         respondent_ids = [r['respondent_id'] for r in responses]
         expected_resp_ids = [u'4352787778', u'4352787305', u'4352786821', u'4352786417', u'4352785923']
+        self.assertEqual(respondent_ids, expected_resp_ids)
