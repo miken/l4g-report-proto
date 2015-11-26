@@ -8,7 +8,7 @@ class Survey(models.Model):
     # SurveyMonkey ID for this survey
     # Usually obtained after first data retrieval
     # Stored as string
-    sm_id = models.CharField("SurveyMonkey ID", max_length=50)
+    sm_id = models.CharField("SurveyMonkey ID", max_length=50, null=True)
 
     def __unicode__(self):
         return self.name
@@ -32,7 +32,17 @@ class Survey(models.Model):
                     question.text = q["heading"]
                     question.survey_id = self.id
                     question.save()
-                    # TODO Create question choices
+                    # Update question choices as well
+                    for a in q['answers']:
+                        cid = a["answer_id"]
+                        text = a["text"]
+                        weight = a.get("weight")
+                        choice, created = Choice.objects.get_or_create(
+                            sm_id=cid,
+                            text=text,
+                            weight=weight,
+                            question_id=question.id
+                            )
 
 
 class Question(models.Model):
@@ -47,7 +57,7 @@ class Question(models.Model):
 class Choice(models.Model):
     sm_id = models.CharField("SurveyMonkey ID", max_length=50)
     text = models.CharField(max_length=255)
-    weight = models.IntegerField()
+    weight = models.IntegerField(null=True)
     question = models.ForeignKey(Question)
 
     def __unicode__(self):
