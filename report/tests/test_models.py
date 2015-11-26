@@ -31,3 +31,10 @@ class SurveyTestCase(TestCase):
             u'This is a select-one question with weighting',
         ]
         self.assertEqual(question_list, expected)
+
+    def test_update_details_twice(self):
+        # No new questions are created after the first update call
+        self.survey.update_details()
+        self.assertEqual(Question.objects.count(), 4)
+        self.survey.update_details()
+        self.assertEqual(Question.objects.count(), 4)
