@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+{% load bootstrap3 %}
+<html lang="en">
+<head>
+  {% bootstrap_css %}
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Listen 4 Good</title>
+</head>
+
+<body>
+  <div class="container">
+    <div class="row text-center">
+      <h1>Listen 4 Good</h1>
+    </div>
+    <div class="row">
+      <div class="col-sm-12 col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+        <div id="content">
+          {% block content %}{% endblock %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% bootstrap_javascript %}
+</body>
+</html>

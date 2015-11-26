@@ -1,5 +1,6 @@
 import os
 from django.db import models
+from django.utils import timezone
 from sm_api import SurveyMonkeyClient
 from report.helpers import str_truncate
 
@@ -10,6 +11,7 @@ class Survey(models.Model):
     # Usually obtained after first data retrieval
     # Stored as string
     sm_id = models.CharField("SurveyMonkey ID", max_length=50, null=True)
+    last_updated = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
         return self.name
@@ -104,6 +106,12 @@ class Survey(models.Model):
                                 choice_id=choice.id,
                                 respondent_id=respondent.id,
                                 )
+
+    def respondent_count(self):
+        return self.respondent_set.count()
+
+    def question_count(self):
+        return self.question_set.count()
 
 
 class Question(models.Model):

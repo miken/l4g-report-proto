@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Surveys</h2>
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Last Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for survey in object_list %}
+        <tr>
+          <td>
+            {{ survey.name }}<br>
+            {{ survey.respondent_count }} respondent(s)<br>
+            {{ survey.question_count }} question(s)
+          </td>
+          <td>#TODO last_updated</td>
+        </tr>
+      {% endfor %}      
+    </tbody>
+  </table>
+{% endblock %}
