@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Survey: {{ survey.name }}</h2>
+  {% for question in survey.question_set.all %}
+    <hr>
+    <h4>{{ question.text }}</h4>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Question</th>
+          <th>Some info</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for choice in question.choice_set.all %}
+        <tr>
+          <td>{{ choice.text }}</td>
+          <td>Data?</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endfor %}
+
+{% endblock %}

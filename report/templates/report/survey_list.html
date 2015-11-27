@@ -15,7 +15,9 @@
       {% for survey in object_list %}
         <tr>
           <td>
-            {{ survey.name }}<br>
+            <a href="{% url 'detail' survey.id %}">
+              {{ survey.name }}  
+            </a><br>
             {{ survey.respondent_count }} respondent(s)<br>
             {{ survey.question_count }} question(s)
           </td>
