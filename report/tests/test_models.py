@@ -37,6 +37,9 @@ class SurveyTestCase(TestCase):
         ]
         self.assertEqual(question_list, expected)
         # Next check nesting between question and choices
+        # Comment question should be tagged as open_ended
+        comment_qn = Question.objects.get(text="Enter a comment here")
+        self.assertTrue(comment_qn.open_ended)
         # Select-one question
         select_one = Question.objects.get(text="Select-one question")
         select_one_choices = select_one.choice_set.values_list("text", flat=True).order_by("text")

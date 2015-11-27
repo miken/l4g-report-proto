@@ -107,8 +107,9 @@ PIPELINE_COMPILERS = (
 PIPELINE_CSS = {
     'application': {
         'source_filenames': (
-            'css/application.scss',
+            'css/main.scss',
             'css/charts.scss',
+            'css/print.scss',
         ),
         'output_filename': 'css/application.css',
     },

@@ -1,0 +1,7 @@
+<div class="comments-board">
+  {% for answer in question.answer_set.all %}
+    <blockquote>
+      <p>{{ answer.text }}</p>
+    </blockquote>
+  {% endfor %}  
+</div>

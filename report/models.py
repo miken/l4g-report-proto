@@ -34,6 +34,8 @@ class Survey(models.Model):
                     question, created = Question.objects.get_or_create(sm_id=qid, survey_id=self.id)
                     question.text = q["heading"]
                     question.survey_id = self.id
+                    if q["type"]["family"] == u'open_ended':
+                        question.open_ended = True
                     question.save()
                     # Update question choices as well
                     for a in q['answers']:
@@ -118,6 +120,8 @@ class Question(models.Model):
     sm_id = models.CharField("SurveyMonkey ID", max_length=50)
     text = models.CharField(max_length=255)
     survey = models.ForeignKey(Survey)
+    # Whether this question takes text input (comment) as answer
+    open_ended = models.BooleanField(default=False)
 
     def __unicode__(self):
         return str_truncate(self.text)

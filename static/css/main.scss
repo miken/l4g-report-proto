@@ -1,0 +1,11 @@
+blockquote {
+  font-size: 14px;
+  border-left: 5px solid lighten(#41bcd4, 30%);
+  margin: 0 0 10px;
+  padding: 10px 10px;
+}
+
+.comments-board {
+  height: 300px;
+  overflow: auto;
+}
