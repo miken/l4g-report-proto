@@ -1,3 +1,4 @@
+from __future__ import division
 import os
 from django.db import models
 from sm_api import SurveyMonkeyClient
@@ -130,6 +131,20 @@ class Choice(models.Model):
 
     def __unicode__(self):
         return "{choice} - {qn}".format(choice=self.text, qn=str_truncate(self.question.text))
+
+    def _get_raw_percentage(self):
+        '''
+        Proportion of respondents selecting this choice
+        Defined as count of selected choices over total
+        number of respondents responded to the question
+        '''
+        numer = self.answer_set.count()
+        denom = self.question.answer_set.count()
+        if denom == 0:
+            return 0
+        else:
+            return numer / denom
+    raw_percentage = property(_get_raw_percentage)
 
 
 class Respondent(models.Model):

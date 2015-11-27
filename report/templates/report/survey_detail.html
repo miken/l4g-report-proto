@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% load helpers %}
+
 {% block content %}
   <h2>Survey: {{ survey.name }}</h2>
   {% for question in survey.question_set.all %}
@@ -16,7 +18,7 @@
         {% for choice in question.choice_set.all %}
         <tr>
           <td>{{ choice.text }}</td>
-          <td>Data?</td>
+          <td>{{ choice.raw_percentage|percentage }}</td>
         </tr>
         {% endfor %}
       </tbody>
