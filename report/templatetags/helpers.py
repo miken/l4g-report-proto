@@ -4,6 +4,6 @@ register = template.Library()
 
 
 def percentage(value):
-    return '{0:.2%}'.format(value)
+    return '{0:.0%}'.format(value)
 
 register.filter('percentage', percentage)

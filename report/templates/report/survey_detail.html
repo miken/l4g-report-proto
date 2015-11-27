@@ -7,18 +7,26 @@
   {% for question in survey.question_set.all %}
     <hr>
     <h4>{{ question.text }}</h4>
+    <table class="chart">
+      {% for choice in question.choice_set.all %}
+        {% include "partials/data_bar.html" with label=choice.text data=choice.raw_percentage|percentage %}
+      {% endfor %}
+    </table>
+
     <table class="table table-striped">
       <thead>
         <tr>
-          <th>Question</th>
-          <th>Some info</th>
+          <th>Choice</th>
+          <th># of Respondents</th>
         </tr>
       </thead>
       <tbody>
         {% for choice in question.choice_set.all %}
         <tr>
           <td>{{ choice.text }}</td>
-          <td>{{ choice.raw_percentage|percentage }}</td>
+          <td>
+            {{ choice.answer_set.count }}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

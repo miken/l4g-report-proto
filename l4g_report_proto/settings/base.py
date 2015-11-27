@@ -108,6 +108,7 @@ PIPELINE_CSS = {
     'application': {
         'source_filenames': (
             'css/application.scss',
+            'css/charts.scss',
         ),
         'output_filename': 'css/application.css',
     },
