@@ -30,6 +30,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'bootstrap3',
+    'pipeline',
     'report'
 )
 
@@ -86,3 +87,37 @@ STATIC_ROOT = 'staticfiles'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'static'),
 )
+
+STATICFILES_STORAGE = 'pipeline.storage.PipelineStorage'
+STATICFILES_FINDERS = (
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'pipeline.finders.PipelineFinder',
+)
+
+# Pipeline settings
+PIPELINE_STORAGE = 'pipeline.storage.PipelineStorage'
+PIPELINE_CSS_COMPRESSOR = 'pipeline.compressors.yuglify.YuglifyCompressor'
+PIPELINE_JS_COMPRESSOR = 'pipeline.compressors.yuglify.YuglifyCompressor'
+PIPELINE_COMPILERS = (
+    'pipeline.compilers.coffee.CoffeeScriptCompiler',
+    'pipeline.compilers.sass.SASSCompiler',
+)
+
+PIPELINE_CSS = {
+    'application': {
+        'source_filenames': (
+            'css/application.scss',
+        ),
+        'output_filename': 'css/application.css',
+    },
+}
+
+PIPELINE_JS = {
+    'application': {
+        'source_filenames': (
+            'js/application.coffee',
+        ),
+        'output_filename': 'js/application.js',
+    },
+}

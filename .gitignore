@@ -1,6 +1,7 @@
 *.pyc
 staticfiles
 secret.py
+.sass-cache
 
 .DS_Store
 db.sqlite3
