@@ -1,3 +1,6 @@
+<p class="comments-count">
+  {{ question.answer_set.count }} comment{{ question.answer_set.count|pluralize }}:
+</p>
 <div class="comments-board">
   {% for answer in question.answer_set.all %}
     <blockquote>
