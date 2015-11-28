@@ -1,6 +1,11 @@
+{% load helpers %}
+
 <tr>
-  <td class="bar-label col-xs-4">{{ label }}</td>
-  <td class="bar col-xs-8">
-    <div style="width: {{ data }};">{{ data }}</div>
+  <td class="bar-label col-xs-4">{{ choice.text }}</td>
+  <td class="bar col-xs-7">
+    <div style="width: {{ choice.raw_percentage|percentage }};">{{ choice.raw_percentage|percentage }}</div>
+  </td>
+  <td class="count col-xs-1">
+    {{ choice.answer_set.count }}
   </td>
 </tr>
