@@ -24,6 +24,7 @@ class SurveyTestCase(TestCase):
         fake_survey.update_details()
         self.assertEqual(Question.objects.count(), 0)
         self.assertEqual(Choice.objects.count(), 0)
+        self.assertIsNotNone(fake_survey.error_message)
 
     def test_update_details(self):
         # Check that there is no question populated yet

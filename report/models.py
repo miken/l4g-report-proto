@@ -12,6 +12,8 @@ class Survey(models.Model):
     # Stored as string
     sm_id = models.CharField("SurveyMonkey ID", max_length=50, null=True)
     last_updated = models.DateTimeField(auto_now=True)
+    # Error message generated during API calls
+    error_message = models.CharField(max_length=255, null=True, default=None)
 
     def __unicode__(self):
         return self.name
@@ -28,11 +30,10 @@ class Survey(models.Model):
         try:
             pages = client.get_survey_details(self.name)
         except IndexError:
-            # Could not found survey with the given name
-            # Do nothing
-            print "Could not find survey in SurveyMonkey. Are you sure the survey name is correct?"
-            pass
+            self.error_message = "Could not find survey in SurveyMonkey. Are you sure the survey name is correct?"
         else:
+            # Clear error_message
+            self.error_message = None
             for p in pages:
                 for q in p["questions"]:
                     # Skip if it's descriptive text
@@ -71,54 +72,59 @@ class Survey(models.Model):
         SURVEYMONKEY_API_TOKEN = os.environ.get('SURVEYMONKEY_API_TOKEN')
         SURVEYMONKEY_API_KEY = os.environ.get('SURVEYMONKEY_API_KEY')
         client = SurveyMonkeyClient(SURVEYMONKEY_API_TOKEN, SURVEYMONKEY_API_KEY)
-        data = client.get_responses(self.name)
-        for r in data:
-            rid = r["respondent_id"]
-            respondent, created = Respondent.objects.get_or_create(sm_id=rid, survey_id=self.id)
-            # Only update Answer/Comment/Rating if it's a new respondent
-            # TODO This means that if a respondent somehow update
-            # their answers after submission, the updated value will not be reflected
-            # unless we create a manual override here
-            if created:
-                for q in r["questions"]:
-                    # In each dict q there are 2 keys: "answers", and "question_id"
-                    # First, use "question_id" to locate the question text
-                    qid = q["question_id"]
-                    question = self.question_set.get(sm_id=qid, survey_id=self.id)
-                    # Associate the question with the respondent if
-                    # the question is not in the set yet
-                    if not respondent.questions.filter(id=question.id).exists():
-                        respondent.questions.add(question)
-                    # Next, find the response for this question
-                    # q["answers"] is a list of dicts
-                    for raw_answer in q["answers"]:
-                        # Here's the tricky part, in the raw_answer dict
-                        # Sometimes results come with "col", "row", or "text"
-                        # If "text" exists, that's a dead giveaway that it's an open-ended question
-                        # We can save that as comment
-                        if "text" in raw_answer.keys():
-                            comment, created = Answer.objects.get_or_create(
-                                question_id=question.id,
-                                respondent_id=respondent.id,
-                                text=raw_answer["text"]
-                                )
-                        else:
-                            # A quant response
-                            # There will be "row" and "col"
-                            # Use these to look up for responses
-                            row_id = raw_answer.get("row")
-                            col_id = raw_answer.get("col")
-                            # If col_ans exists, it's a horizontal question
-                            if col_id:
-                                choice = question.choice_set.get(sm_id=col_id)
+        try:
+            data = client.get_responses(self.name)
+        except IndexError:
+            self.error_message = "Could not find survey in SurveyMonkey. Are you sure the survey name is correct?"
+        else:
+            self.error_message = None
+            for r in data:
+                rid = r["respondent_id"]
+                respondent, created = Respondent.objects.get_or_create(sm_id=rid, survey_id=self.id)
+                # Only update Answer/Comment/Rating if it's a new respondent
+                # TODO This means that if a respondent somehow update
+                # their answers after submission, the updated value will not be reflected
+                # unless we create a manual override here
+                if created:
+                    for q in r["questions"]:
+                        # In each dict q there are 2 keys: "answers", and "question_id"
+                        # First, use "question_id" to locate the question text
+                        qid = q["question_id"]
+                        question = self.question_set.get(sm_id=qid, survey_id=self.id)
+                        # Associate the question with the respondent if
+                        # the question is not in the set yet
+                        if not respondent.questions.filter(id=question.id).exists():
+                            respondent.questions.add(question)
+                        # Next, find the response for this question
+                        # q["answers"] is a list of dicts
+                        for raw_answer in q["answers"]:
+                            # Here's the tricky part, in the raw_answer dict
+                            # Sometimes results come with "col", "row", or "text"
+                            # If "text" exists, that's a dead giveaway that it's an open-ended question
+                            # We can save that as comment
+                            if "text" in raw_answer.keys():
+                                comment, created = Answer.objects.get_or_create(
+                                    question_id=question.id,
+                                    respondent_id=respondent.id,
+                                    text=raw_answer["text"]
+                                    )
                             else:
-                                # Try looking up with row_id
-                                choice = question.choice_set.get(sm_id=row_id)
-                            rating, created = Answer.objects.get_or_create(
-                                question_id=question.id,
-                                choice_id=choice.id,
-                                respondent_id=respondent.id,
-                                )
+                                # A quant response
+                                # There will be "row" and "col"
+                                # Use these to look up for responses
+                                row_id = raw_answer.get("row")
+                                col_id = raw_answer.get("col")
+                                # If col_ans exists, it's a horizontal question
+                                if col_id:
+                                    choice = question.choice_set.get(sm_id=col_id)
+                                else:
+                                    # Try looking up with row_id
+                                    choice = question.choice_set.get(sm_id=row_id)
+                                rating, created = Answer.objects.get_or_create(
+                                    question_id=question.id,
+                                    choice_id=choice.id,
+                                    respondent_id=respondent.id,
+                                    )
 
     def respondent_count(self):
         return self.respondent_set.count()
