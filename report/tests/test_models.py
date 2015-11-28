@@ -19,6 +19,12 @@ class SurveyTestCase(TestCase):
         # Cool down 1 second to comply with SurveyMonkey API
         time.sleep(1)
 
+    def test_update_details_for_nonexistent_survey(self):
+        fake_survey = Survey.objects.create(name="Does not exist")
+        fake_survey.update_details()
+        self.assertEqual(Question.objects.count(), 0)
+        self.assertEqual(Choice.objects.count(), 0)
+
     def test_update_details(self):
         # Check that there is no question populated yet
         self.assertEqual(Question.objects.count(), 0)

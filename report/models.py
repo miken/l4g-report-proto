@@ -25,31 +25,38 @@ class Survey(models.Model):
         SURVEYMONKEY_API_TOKEN = os.environ.get('SURVEYMONKEY_API_TOKEN')
         SURVEYMONKEY_API_KEY = os.environ.get('SURVEYMONKEY_API_KEY')
         client = SurveyMonkeyClient(SURVEYMONKEY_API_TOKEN, SURVEYMONKEY_API_KEY)
-        pages = client.get_survey_details(self.name)
-        for p in pages:
-            for q in p["questions"]:
-                # Skip if it's descriptive text
-                if q["type"]["subtype"] != "descriptive_text":
-                    qid = q["question_id"]
-                    question, created = Question.objects.get_or_create(sm_id=qid, survey_id=self.id)
-                    question.text = q["heading"]
-                    question.survey_id = self.id
-                    if q["type"]["family"] == u'open_ended':
-                        question.open_ended = True
-                    question.save()
-                    # Update question choices as well
-                    for a in q['answers']:
-                        # Skip if no content in text
-                        if a["text"]:
-                            cid = a["answer_id"]
-                            text = a["text"]
-                            weight = a.get("weight")
-                            choice, created = Choice.objects.get_or_create(
-                                sm_id=cid,
-                                text=text,
-                                weight=weight,
-                                question_id=question.id
-                                )
+        try:
+            pages = client.get_survey_details(self.name)
+        except IndexError:
+            # Could not found survey with the given name
+            # Do nothing
+            print "Could not find survey in SurveyMonkey. Are you sure the survey name is correct?"
+            pass
+        else:
+            for p in pages:
+                for q in p["questions"]:
+                    # Skip if it's descriptive text
+                    if q["type"]["subtype"] != "descriptive_text":
+                        qid = q["question_id"]
+                        question, created = Question.objects.get_or_create(sm_id=qid, survey_id=self.id)
+                        question.text = q["heading"]
+                        question.survey_id = self.id
+                        if q["type"]["family"] == u'open_ended':
+                            question.open_ended = True
+                        question.save()
+                        # Update question choices as well
+                        for a in q['answers']:
+                            # Skip if no content in text
+                            if a["text"]:
+                                cid = a["answer_id"]
+                                text = a["text"]
+                                weight = a.get("weight")
+                                choice, created = Choice.objects.get_or_create(
+                                    sm_id=cid,
+                                    text=text,
+                                    weight=weight,
+                                    question_id=question.id
+                                    )
 
     def download_responses(self):
         '''
@@ -78,6 +85,10 @@ class Survey(models.Model):
                     # First, use "question_id" to locate the question text
                     qid = q["question_id"]
                     question = self.question_set.get(sm_id=qid, survey_id=self.id)
+                    # Associate the question with the respondent if
+                    # the question is not in the set yet
+                    if not respondent.questions.filter(id=question.id).exists():
+                        respondent.questions.add(question)
                     # Next, find the response for this question
                     # q["answers"] is a list of dicts
                     for raw_answer in q["answers"]:
@@ -143,7 +154,7 @@ class Choice(models.Model):
         number of respondents responded to the question
         '''
         numer = self.answer_set.count()
-        denom = self.question.answer_set.count()
+        denom = self.question.respondent_set.count()
         if denom == 0:
             return 0
         else:
@@ -154,6 +165,7 @@ class Choice(models.Model):
 class Respondent(models.Model):
     sm_id = models.CharField("SurveyMonkey ID", max_length=50)
     survey = models.ForeignKey(Survey)
+    questions = models.ManyToManyField(Question)
 
     def __unicode__(self):
         return "ID {}".format(self.sm_id)
