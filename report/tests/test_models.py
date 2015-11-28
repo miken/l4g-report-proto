@@ -132,3 +132,28 @@ class SurveyTestCase(TestCase):
         self.survey.download_responses()
         self.assertEqual(Respondent.objects.count(), 5)
         self.assertEqual(Answer.objects.count(), 26)
+
+
+class ChoiceTestCase(TestCase):
+    @classmethod
+    def setUpTestData(self):
+        # Read SurveyMonkey API Token & Key
+        SURVEYMONKEY_API_TOKEN = os.environ.get('SURVEYMONKEY_API_TOKEN')
+        SURVEYMONKEY_API_KEY = os.environ.get('SURVEYMONKEY_API_KEY')
+        self.client = SurveyMonkeyClient(SURVEYMONKEY_API_TOKEN, SURVEYMONKEY_API_KEY)
+        # Create a survey and connect to SurveyMonkey via client
+        self.survey = Survey.objects.create(name="Mike Test - DO NOT USE")
+        # Download responses
+        self.survey.update_details()
+        self.survey.download_responses()
+
+    def tearDown(self):
+        # Cool down 1 second to comply with SurveyMonkey API
+        time.sleep(1)
+
+    def test_raw_percentage(self):
+        select_all = Question.objects.get(text="Select-all question")
+        choice_1 = select_all.choice_set.get(text="Option 1")
+        self.assertEqual(select_all.respondent_set.count(), 5)
+        self.assertEqual(select_all.answer_set.count(), 12)
+        self.assertEqual(choice_1.raw_percentage, 0.8)
