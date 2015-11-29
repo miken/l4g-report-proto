@@ -134,6 +134,30 @@ class SurveyTestCase(TestCase):
         self.assertEqual(Answer.objects.count(), 26)
 
 
+class QuestionTestCase(TestCase):
+    @classmethod
+    def setUpTestData(self):
+        # Read SurveyMonkey API Token & Key
+        SURVEYMONKEY_API_TOKEN = os.environ.get('SURVEYMONKEY_API_TOKEN')
+        SURVEYMONKEY_API_KEY = os.environ.get('SURVEYMONKEY_API_KEY')
+        self.client = SurveyMonkeyClient(SURVEYMONKEY_API_TOKEN, SURVEYMONKEY_API_KEY)
+        # Create a survey and connect to SurveyMonkey via client
+        self.survey = Survey.objects.create(name="Mike Test - DO NOT USE")
+        # Download responses
+        self.survey.update_details()
+        self.survey.download_responses()
+
+    def tearDown(self):
+        # Cool down 1 second to comply with SurveyMonkey API
+        time.sleep(1)
+
+    def test_helper_count_responses(self):
+        question = self.survey.question_set.get(text="This is a select-one question with weighting")
+        # Two people select Not available
+        na_count = question._helper_count_responses([77])
+        self.assertEqual(na_count, 2)
+
+
 class ChoiceTestCase(TestCase):
     @classmethod
     def setUpTestData(self):

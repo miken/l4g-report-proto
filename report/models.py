@@ -15,6 +15,9 @@ class Survey(models.Model):
     # Error message generated during API calls
     error_message = models.CharField(max_length=255, null=True, default=None)
 
+    class Meta:
+        ordering = ['last_updated', 'name']
+
     def __unicode__(self):
         return self.name
 
@@ -132,6 +135,38 @@ class Survey(models.Model):
     def question_count(self):
         return self.question_set.count()
 
+    def _nps_questions(self):
+        return self.question_set.filter(nps=True)
+    nps_questions = property(_nps_questions)
+
+    def _net_promoter_score(self):
+        '''
+        This method finds all NPS questions for the given survey
+        Across different versions of NPS questions:
+        - Tally up count of all promoters
+        - Tally up count of all detractors
+        - Tally up count of respondents
+        - Calculate promoters %
+        - Calculate detractors %
+        - Subtract detractors % from promoters % to arrive at NPS
+        See calculation method here: https://www.netpromoter.com/know/
+        '''
+        if self.nps_questions:
+            count_all_promoters = 0
+            count_all_detractors = 0
+            count_all_respondents = 0
+            for q in self.nps_questions:
+                count_all_promoters += q.promoters_count
+                count_all_detractors += q.detractors_count
+                count_all_respondents += q.respondent_set.count()
+            promoters_prop = count_all_promoters / count_all_respondents
+            detractors_prop = count_all_detractors / count_all_respondents
+            raw_score = promoters_prop - detractors_prop
+            # Need to multiply by 100 and round up
+            score = round(raw_score * 100)
+            return int(score)
+    net_promoter_score = property(_net_promoter_score)
+
 
 class Question(models.Model):
     sm_id = models.CharField("SurveyMonkey ID", max_length=50)
@@ -139,9 +174,53 @@ class Question(models.Model):
     survey = models.ForeignKey(Survey)
     # Whether this question takes text input (comment) as answer
     open_ended = models.BooleanField(default=False)
+    # Whether this question is part of Net Promoter Score questions
+    nps = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['survey', 'text']
 
     def __unicode__(self):
         return str_truncate(self.text)
+
+    def _helper_count_responses(self, range):
+        '''
+        Helper method that will count the number of responses
+        selecting options corresponding to the list in range
+        '''
+        choices = self.choice_set.filter(weight__in=range)
+        answers = self.answer_set.filter(choice__in=choices)
+        return answers.count()
+
+    def _nps_promoters_count(self):
+        '''
+        This method only applies to NPS question
+        It'll return the count of promoters (those rating 9-10)
+        '''
+        if self.nps:
+            values_range = [9, 10]
+            return self._helper_count_responses(values_range)
+    promoters_count = property(_nps_promoters_count)
+
+    def _nps_detractors_count(self):
+        '''
+        This method only applies to NPS question
+        It'll return the count of detractors (those rating 0-6)
+        '''
+        if self.nps:
+            values_range = range(0, 7)
+            return self._helper_count_responses(values_range)
+    detractors_count = property(_nps_detractors_count)
+
+    def _nps_passives_count(self):
+        '''
+        This method only applies to NPS question
+        It'll return the count of passives (those rating 7-8)
+        '''
+        if self.nps:
+            values_range = [7, 8]
+            return self._helper_count_responses(values_range)
+    passives_count = property(_nps_passives_count)
 
 
 class Choice(models.Model):
