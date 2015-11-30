@@ -55,6 +55,8 @@ class Survey(models.Model):
                                 cid = a["answer_id"]
                                 text = a["text"]
                                 weight = a.get("weight")
+                                # TODO Allow change of choice text without
+                                # creating a new choice when 
                                 choice, created = Choice.objects.get_or_create(
                                     sm_id=cid,
                                     text=text,
@@ -138,6 +140,61 @@ class Survey(models.Model):
     def _nps_questions(self):
         return self.question_set.filter(nps=True)
     nps_questions = property(_nps_questions)
+
+    def _nps_respondent_count(self):
+        if self.nps_questions:
+            count_all_respondents = 0
+            for q in self.nps_questions:
+                count_all_respondents += q.respondent_set.count()
+            return count_all_respondents
+
+    def _promoters_count(self):
+        if self.nps_questions:
+            count_all_promoters = 0
+            for q in self.nps_questions:
+                count_all_promoters += q.promoters_count
+            return count_all_promoters
+    promoters_count = property(_promoters_count)
+
+    def _promoters_prop(self):
+        if self.nps_questions:
+            count_all_promoters = self._promoters_count()
+            count_all_respondents = self._nps_respondent_count()
+            prop = count_all_promoters / count_all_respondents
+            return int(round(prop * 100))
+    promoters_prop = property(_promoters_prop)
+
+    def _passives_count(self):
+        if self.nps_questions:
+            count_all_passives = 0
+            for q in self.nps_questions:
+                count_all_passives += q.passives_count
+            return count_all_passives
+    passives_count = property(_passives_count)
+
+    def _passives_prop(self):
+        if self.nps_questions:
+            count_all_passives = self._passives_count()
+            count_all_respondents = self._nps_respondent_count()
+            prop = count_all_passives / count_all_respondents
+            return int(round(prop * 100))
+    passives_prop = property(_passives_prop)
+
+    def _detractors_count(self):
+        if self.nps_questions:
+            count_all_detractors = 0
+            for q in self.nps_questions:
+                count_all_detractors += q.detractors_count
+            return count_all_detractors
+    detractors_count = property(_detractors_count)
+
+    def _detractors_prop(self):
+        if self.nps_questions:
+            count_all_detractors = self._detractors_count()
+            count_all_respondents = self._nps_respondent_count()
+            prop = count_all_detractors / count_all_respondents
+            return int(round(prop * 100))
+    detractors_prop = property(_detractors_prop)
 
     def _net_promoter_score(self):
         '''

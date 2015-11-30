@@ -1,15 +1,62 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <h2>Survey: {{ survey.name }}</h2>
-  {% for question in survey.question_set.all %}
-    <hr>
-    <h4>{{ question.text }}</h4>
-    {% if question.open_ended %}
-      {% include "partials/question_comments.html" with question=question %}
-    {% else %}
-      {% include "partials/question_ratings.html" with question=question %}
-    {% endif %}
-  {% endfor %}
+  <h2>Report for: {{ survey.name }}</h2>
+  {# Net Promoter Score #}
+  <div class="row">
+    <div class="col-sm-4">
+      <div class="panel panel-info">
+        <div class="panel-heading text-center">
+          <h3 class="panel-title">Net Promoter Score</h3>
+        </div>
+        <div class="panel-body text-center">
+          <p class="score">{{ survey.net_promoter_score }}</p>
+          <p>(-100 to 100)</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-8">
+      <div class="nps-component">
+        <div class="nps-label text-success">Promoters % (N={{ survey.promoters_count }})</div>
+        <div class="progress">
+          <div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="{{ survey.promoters_prop}}" aria-valuemin="0" aria-valuemax="100" style="width: {{ survey.promoters_prop }}%;">
+            {{ survey.promoters_prop }}%
+          </div>
+        </div>
+      </div>
 
+      <div class="nps-component">
+        <div class="nps-label text-warning">Passives % (N={{ survey.passives_count }})</div>
+        <div class="progress">
+          <div class="progress-bar progress-bar-warning" role="progressbar" aria-valuenow="{{ survey.passives_prop}}" aria-valuemin="0" aria-valuemax="100" style="width: {{ survey.passives_prop }}%;">
+            {{ survey.passives_prop }}%
+          </div>
+        </div>
+      </div>
+
+      <div class="nps-component">
+        <div class="nps-label text-danger">Detractors % (N={{ survey.detractors_count }})</div>
+        <div class="progress">
+          <div class="progress-bar progress-bar-danger" role="progressbar" aria-valuenow="{{ survey.detractors_prop}}" aria-valuemin="0" aria-valuemax="100" style="width: {{ survey.detractors_prop }}%;">
+            {{ survey.detractors_prop }}%
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <p>For more information on Net Promoter Score, please visit <a href="https://www.netpromoter.com/know/">https://www.netpromoter.com/know/</a></p>
+  <div class="row">
+    <div class="col-xs-12">
+      {% for question in survey.question_set.all %}
+        <hr>
+        <h4>{{ question.text }}</h4>
+        {% if question.open_ended %}
+          {% include "partials/question_comments.html" with question=question %}
+        {% else %}
+          {% include "partials/question_ratings.html" with question=question %}
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
 {% endblock %}
